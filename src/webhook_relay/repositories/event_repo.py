@@ -11,6 +11,9 @@ class EventRepo:
     def __init__(self, session: AsyncSession):
         self.session = session
 
+    async def commit(self) -> None:
+        await self.session.commit()
+
     async def create(self, event_data: EventCreate) -> Event:
         event = Event(
             event_type=event_data.event_type,
@@ -18,8 +21,7 @@ class EventRepo:
             idempotency_key=event_data.idempotency_key,
         )
         self.session.add(event)
-        await self.session.commit()
-        await self.session.refresh(event)
+        await self.session.flush()
         return event
 
     async def get_by_id(self, event_id: uuid.UUID) -> Event | None:

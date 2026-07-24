@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from webhook_relay.models import Subscription
@@ -28,7 +28,7 @@ class SubscriptionRepo:
     async def get_all(self, limit: int, offset: int) -> list[Subscription]:
         stmt = select(Subscription).offset(offset).limit(limit)
         result = await self.session.scalars(stmt)
-        return result
+        return list(result.all())
 
     async def get_by_id(self, subscription_id: uuid.UUID) -> Subscription | None:
         return await self.session.get(Subscription, subscription_id)
@@ -41,3 +41,11 @@ class SubscriptionRepo:
         await self.session.delete(subscription)
         await self.session.commit()
         return True
+
+    async def get_active_by_event_type(self, event_type: str) -> list[Subscription]:
+        stmt = select(Subscription).where(
+            Subscription.is_active.is_(True),
+            func.jsonb_exists(Subscription.event_types, event_type),
+        )
+        result = await self.session.scalars(stmt)
+        return list(result.all())
