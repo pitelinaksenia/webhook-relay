@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -10,6 +11,9 @@ from webhook_relay.models.delivery import Delivery, DeliveryAttempt, DeliverySta
 class DeliveryRepo:
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    async def commit(self) -> None:
+        await self.session.commit()
 
     async def create_many(
         self, event_id: uuid.UUID, subscription_ids: list[uuid.UUID]
@@ -35,6 +39,20 @@ class DeliveryRepo:
             delivery_id,
             options=[selectinload(Delivery.subscription), selectinload(Delivery.event)],
         )
+
+    async def get_by_subscription_id(
+        self, subscription_id: uuid.UUID, limit: int = 20, offset: int = 0
+    ) -> list[Delivery]:
+        stmt = (
+            select(Delivery)
+            .where(Delivery.subscription_id == subscription_id)
+            .order_by(Delivery.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+
+        result = await self.session.scalars(stmt)
+        return list(result.all())
 
     async def update_status(
         self,
@@ -74,3 +92,16 @@ class DeliveryRepo:
         await self.session.flush()
 
         return new_attempt
+
+    async def reset_for_retry(self, delivery_id: uuid.UUID) -> Delivery | None:
+        delivery = await self.get_by_id(delivery_id)
+        if delivery is None:
+            return None
+
+        delivery.status = DeliveryStatus.PENDING
+        delivery.attempt_count = 0
+        delivery.last_error = None
+        delivery.next_attempt_at = None
+
+        await self.session.flush()
+        return delivery

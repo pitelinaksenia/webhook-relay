@@ -22,6 +22,7 @@ class EventService:
         self.event_repo = event_repo
         self.subscription_repo = subscription_repo
         self.delivery_repo = delivery_repo
+        self.arq_pool = arq_pool
 
     async def create(self, event_data: EventCreate) -> Event:
         existing = await self.event_repo.get_by_idempotency_key(event_data.idempotency_key)
@@ -33,6 +34,10 @@ class EventService:
         deliveries = await self.delivery_repo.create_many(event.id, subscription_ids)
         attributes.set_committed_value(event, "deliveries", deliveries)
         await self.event_repo.commit()
+
+        for delivery in deliveries:
+            await self.arq_pool.enqueue_job("deliver_webhook", str(delivery.id))
+
         return event
 
     async def get_by_id(self, event_id: uuid.UUID) -> Event:
