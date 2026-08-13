@@ -26,3 +26,9 @@ class EventNotFoundError(NotFoundError):
     def __init__(self, event_id):
         self.event_id = event_id
         super().__init__(f"Event {event_id} not found")
+
+
+class DeadLetterNotFoundError(NotFoundError):
+    def __init__(self, dead_letter_id):
+        self.dead_letter_id = dead_letter_id
+        super().__init__(f"Dead letter {dead_letter_id} not found")

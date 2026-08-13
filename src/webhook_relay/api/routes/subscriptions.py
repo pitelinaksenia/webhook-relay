@@ -3,6 +3,7 @@ import uuid
 from fastapi import APIRouter, Depends
 
 from webhook_relay.api.dependencies import get_subscription_service
+from webhook_relay.schemas.delivery import DeliveryResponse
 from webhook_relay.schemas.subscription import SubscriptionCreate, SubscriptionResponse
 from webhook_relay.services.subscription_service import SubscriptionService
 
@@ -27,6 +28,16 @@ async def get_subscriptions(
     subscription_service: SubscriptionService = Depends(get_subscription_service),
 ) -> list[SubscriptionResponse]:
     return await subscription_service.get_all(limit=limit, offset=offset)
+
+
+@router.get("/{subscription_id}/deliveries", response_model=list[DeliveryResponse])
+async def get_deliveries(
+    subscription_id: uuid.UUID,
+    limit: int = 20,
+    offset: int = 0,
+    subscription_service: SubscriptionService = Depends(get_subscription_service),
+) -> list[DeliveryResponse]:
+    return await subscription_service.get_deliveries(subscription_id, limit=limit, offset=offset)
 
 
 @router.get("/{subscription_id}", response_model=SubscriptionResponse)
