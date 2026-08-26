@@ -35,6 +35,15 @@ class SubscriptionRepo:
     async def get_by_id(self, subscription_id: uuid.UUID) -> Subscription | None:
         return await self.session.get(Subscription, subscription_id)
 
+    async def set_active(self, subscription_id: uuid.UUID, is_active: bool) -> Subscription | None:
+        subscription = await self.get_by_id(subscription_id)
+        if subscription is None:
+            return None
+
+        subscription.is_active = is_active
+        await self.session.flush()
+        return subscription
+
     async def delete_by_id(self, subscription_id: uuid.UUID) -> bool:
         subscription = await self.get_by_id(subscription_id)
         if subscription is None:

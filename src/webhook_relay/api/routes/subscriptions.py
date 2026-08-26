@@ -48,6 +48,22 @@ async def get_subscription_by_id(
     return await subscription_service.get(subscription_id)
 
 
+@router.post("/{subscription_id}/deactivate", response_model=SubscriptionResponse)
+async def deactivate_subscription(
+    subscription_id: uuid.UUID,
+    subscription_service: SubscriptionService = Depends(get_subscription_service),
+) -> SubscriptionResponse:
+    return await subscription_service.set_active(subscription_id, is_active=False)
+
+
+@router.post("/{subscription_id}/activate", response_model=SubscriptionResponse)
+async def activate_subscription(
+    subscription_id: uuid.UUID,
+    subscription_service: SubscriptionService = Depends(get_subscription_service),
+) -> SubscriptionResponse:
+    return await subscription_service.set_active(subscription_id, is_active=True)
+
+
 @router.delete("/{subscription_id}")
 async def delete_subscription_by_id(
     subscription_id: uuid.UUID,

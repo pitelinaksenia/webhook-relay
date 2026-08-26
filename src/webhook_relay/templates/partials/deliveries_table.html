@@ -1,0 +1,34 @@
+{% if deliveries %}
+<table>
+  <thead>
+    <tr>
+      <th>Event type</th>
+      <th>Subscriber</th>
+      <th>Status</th>
+      <th>Attempts</th>
+      <th>Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in deliveries %}
+    <tr>
+      <td><a class="row-link" href="/dashboard/deliveries/{{ d.id }}">{{ d.event.event_type }}</a></td>
+      <td>{{ d.subscription.url }}</td>
+      <td><span class="badge {{ d.status.value }}">{{ d.status.value }}</span></td>
+      <td>{{ d.attempt_count }}</td>
+      <td>{{ d.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div class="pagination">
+  {% if page > 1 %}
+  <button hx-get="/dashboard/deliveries?page={{ page - 1 }}{% if selected_status %}&status={{ selected_status.value }}{% endif %}{% if selected_event_type %}&event_type={{ selected_event_type }}{% endif %}" hx-target="#deliveries-table">Prev</button>
+  {% endif %}
+  {% if has_next %}
+  <button hx-get="/dashboard/deliveries?page={{ page + 1 }}{% if selected_status %}&status={{ selected_status.value }}{% endif %}{% if selected_event_type %}&event_type={{ selected_event_type }}{% endif %}" hx-target="#deliveries-table">Next</button>
+  {% endif %}
+</div>
+{% else %}
+<div class="empty">No deliveries found</div>
+{% endif %}

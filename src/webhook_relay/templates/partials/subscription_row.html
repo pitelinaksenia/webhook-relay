@@ -1,0 +1,14 @@
+<tr id="sub-{{ sub.id }}">
+  <td>{{ sub.url }}{% if error %}<br /><small style="color: var(--err)">{{ error }}</small>{% endif %}</td>
+  <td>{{ sub.event_types | join(", ") }}</td>
+  <td>{{ "yes" if sub.is_active else "no" }}</td>
+  <td>{{ sub.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+  <td>
+    {% if sub.is_active %}
+    <button hx-post="/dashboard/subscriptions/{{ sub.id }}/deactivate" hx-target="#sub-{{ sub.id }}" hx-swap="outerHTML">Deactivate</button>
+    {% else %}
+    <button hx-post="/dashboard/subscriptions/{{ sub.id }}/activate" hx-target="#sub-{{ sub.id }}" hx-swap="outerHTML">Activate</button>
+    {% endif %}
+    <button class="danger" hx-post="/dashboard/subscriptions/{{ sub.id }}/delete" hx-target="#sub-{{ sub.id }}" hx-swap="outerHTML" hx-confirm="Delete this subscription?">Delete</button>
+  </td>
+</tr>

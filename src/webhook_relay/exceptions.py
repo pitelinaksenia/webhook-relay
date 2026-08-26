@@ -28,6 +28,12 @@ class EventNotFoundError(NotFoundError):
         super().__init__(f"Event {event_id} not found")
 
 
+class DeliveryNotFoundError(NotFoundError):
+    def __init__(self, delivery_id):
+        self.delivery_id = delivery_id
+        super().__init__(f"Delivery {delivery_id} not found")
+
+
 class DeadLetterNotFoundError(NotFoundError):
     def __init__(self, dead_letter_id):
         self.dead_letter_id = dead_letter_id

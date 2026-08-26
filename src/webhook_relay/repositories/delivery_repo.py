@@ -1,11 +1,12 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from webhook_relay.models.delivery import Delivery, DeliveryAttempt, DeliveryStatus
+from webhook_relay.models.event import Event
 
 
 class DeliveryRepo:
@@ -66,6 +67,67 @@ class DeliveryRepo:
 
         result = await self.session.scalars(stmt)
         return list(result.all())
+
+    async def get_all(
+        self,
+        status: DeliveryStatus | None = None,
+        event_type: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[Delivery]:
+        stmt = (
+            select(Delivery)
+            .options(selectinload(Delivery.subscription), selectinload(Delivery.event))
+            .order_by(Delivery.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        if status is not None:
+            stmt = stmt.where(Delivery.status == status)
+        if event_type is not None:
+            stmt = stmt.join(Event, Event.id == Delivery.event_id).where(
+                Event.event_type == event_type
+            )
+
+        result = await self.session.scalars(stmt)
+        return list(result.all())
+
+    async def count(
+        self,
+        status: DeliveryStatus | None = None,
+        event_type: str | None = None,
+    ) -> int:
+        stmt = select(func.count()).select_from(Delivery)
+        if status is not None:
+            stmt = stmt.where(Delivery.status == status)
+        if event_type is not None:
+            stmt = stmt.join(Event, Event.id == Delivery.event_id).where(
+                Event.event_type == event_type
+            )
+
+        return (await self.session.scalars(stmt)).one()
+
+    async def get_with_attempts(self, delivery_id: uuid.UUID) -> Delivery | None:
+        stmt = (
+            select(Delivery)
+            .where(Delivery.id == delivery_id)
+            .options(
+                selectinload(Delivery.subscription),
+                selectinload(Delivery.event),
+                selectinload(Delivery.attempts),
+                selectinload(Delivery.dead_letter),
+            )
+        )
+        return (await self.session.scalars(stmt)).first()
+
+    async def stats_since(self, since: datetime) -> dict[DeliveryStatus, int]:
+        stmt = (
+            select(Delivery.status, func.count())
+            .where(Delivery.created_at >= since)
+            .group_by(Delivery.status)
+        )
+        result = await self.session.execute(stmt)
+        return {status: count for status, count in result.all()}
 
     async def update_status(
         self,

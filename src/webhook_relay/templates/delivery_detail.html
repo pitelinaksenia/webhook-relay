@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Delivery {{ delivery.id }} · Webhook Relay{% endblock %}
+{% block content %}
+<h1>Delivery <span class="badge {{ delivery.status.value }}">{{ delivery.status.value }}</span></h1>
+
+<div class="stats">
+  <div class="stat">
+    <div class="value">{{ delivery.event.event_type }}</div>
+    <div class="label">Event type</div>
+  </div>
+  <div class="stat">
+    <div class="value">{{ delivery.attempt_count }}</div>
+    <div class="label">Attempts</div>
+  </div>
+  <div class="stat">
+    <div class="value">{{ delivery.subscription.url }}</div>
+    <div class="label">Subscriber</div>
+  </div>
+</div>
+
+{% if delivery.last_error %}
+<h2>Last error</h2>
+<pre>{{ delivery.last_error }}</pre>
+{% endif %}
+
+<h2>Payload</h2>
+<pre>{{ delivery.event.payload }}</pre>
+
+<h2>Attempt history</h2>
+{% if delivery.attempts %}
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>HTTP status</th>
+      <th>Duration</th>
+      <th>Error</th>
+      <th>At</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for a in delivery.attempts %}
+    <tr>
+      <td>{{ a.attempt_number }}</td>
+      <td>{{ a.http_status or "—" }}</td>
+      <td>{{ a.duration_ms }} ms</td>
+      <td>{{ a.error or "—" }}</td>
+      <td>{{ a.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">No attempts yet</div>
+{% endif %}
+{% endblock %}

@@ -8,6 +8,8 @@ from webhook_relay.config import Environment, settings
 engine = create_async_engine(
     settings.database_url.get_secret_value(),
     echo=settings.debug,
+    pool_pre_ping=True,
+    pool_recycle=300,
     connect_args={"ssl": "require"} if settings.env == Environment.PRODUCTION else {},
 )
 

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Deliveries · Webhook Relay{% endblock %}
+{% block content %}
+<h1>Deliveries</h1>
+
+<div class="stats">
+  {% for s in statuses %}
+  <div class="stat">
+    <div class="value">{{ stats.get(s, 0) }}</div>
+    <div class="label">{{ s.value }} (24h)</div>
+  </div>
+  {% endfor %}
+</div>
+
+<form class="filters" hx-get="/dashboard/deliveries" hx-target="#deliveries-table" hx-swap="innerHTML" hx-push-url="false">
+  <select name="status" hx-get="/dashboard/deliveries" hx-target="#deliveries-table" hx-trigger="change">
+    <option value="">All statuses</option>
+    {% for s in statuses %}
+    <option value="{{ s.value }}" {% if selected_status == s %}selected{% endif %}>{{ s.value }}</option>
+    {% endfor %}
+  </select>
+  <select name="event_type" hx-get="/dashboard/deliveries" hx-target="#deliveries-table" hx-trigger="change">
+    <option value="">All event types</option>
+    {% for et in event_types %}
+    <option value="{{ et }}" {% if selected_event_type == et %}selected{% endif %}>{{ et }}</option>
+    {% endfor %}
+  </select>
+</form>
+
+<div id="deliveries-table">
+  {% include "partials/deliveries_table.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Subscriptions · Webhook Relay{% endblock %}
+{% block content %}
+<h1>Subscriptions</h1>
+
+<form class="form-row" hx-post="/dashboard/subscriptions" hx-target="#subscriptions-table" hx-swap="innerHTML" hx-on::after-request="this.reset()">
+  <input type="url" name="url" placeholder="https://example.com/webhook" required />
+  <input type="text" name="event_types" placeholder="order.created, order.updated" required />
+  <input type="text" name="secret" placeholder="secret" required />
+  <button type="submit">Add subscription</button>
+</form>
+
+<div id="subscriptions-table">
+  {% include "partials/subscriptions_table.html" %}
+</div>
+{% endblock %}

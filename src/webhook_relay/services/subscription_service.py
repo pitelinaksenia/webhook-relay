@@ -33,6 +33,14 @@ class SubscriptionService:
             raise SubscriptionNotFoundError(subscription_id)
         return subscription
 
+    async def set_active(self, subscription_id: uuid.UUID, is_active: bool) -> Subscription:
+        subscription = await self.subscription_repo.set_active(subscription_id, is_active)
+        if subscription is None:
+            raise SubscriptionNotFoundError(subscription_id)
+
+        await self.subscription_repo.commit()
+        return subscription
+
     async def delete(self, subscription_id: uuid.UUID) -> None:
         try:
             deleted = await self.subscription_repo.delete_by_id(subscription_id)

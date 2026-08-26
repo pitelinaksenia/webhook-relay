@@ -45,6 +45,24 @@ class TestGetSubscription:
         assert len(response.json()) == 2
 
 
+class TestToggleSubscriptionActive:
+    async def test_deactivate_then_activate(self, client, db_session):
+        subscription = await seed_subscription(db_session)
+
+        deactivate_response = await client.post(f"/subscriptions/{subscription.id}/deactivate")
+        assert deactivate_response.status_code == 200
+        assert deactivate_response.json()["is_active"] is False
+
+        activate_response = await client.post(f"/subscriptions/{subscription.id}/activate")
+        assert activate_response.status_code == 200
+        assert activate_response.json()["is_active"] is True
+
+    async def test_unknown_subscription_returns_404(self, client):
+        response = await client.post(f"/subscriptions/{uuid.uuid4()}/deactivate")
+
+        assert response.status_code == 404
+
+
 class TestDeleteSubscription:
     async def test_deletes_subscription_without_deliveries(self, client, db_session):
         subscription = await seed_subscription(db_session)

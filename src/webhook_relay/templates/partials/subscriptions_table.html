@@ -1,0 +1,20 @@
+{% if subscriptions %}
+<table>
+  <thead>
+    <tr>
+      <th>URL</th>
+      <th>Event types</th>
+      <th>Active</th>
+      <th>Created</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for sub in subscriptions %}
+    {% include "partials/subscription_row.html" %}
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">No subscriptions yet</div>
+{% endif %}

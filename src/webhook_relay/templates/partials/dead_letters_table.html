@@ -1,0 +1,26 @@
+{% if dead_letters %}
+<table>
+  <thead>
+    <tr>
+      <th>Delivery</th>
+      <th>Last error</th>
+      <th>Failed at</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for dl in dead_letters %}
+    <tr id="dl-{{ dl.id }}">
+      <td><a class="row-link" href="/dashboard/deliveries/{{ dl.delivery_id }}">{{ dl.delivery_id }}</a></td>
+      <td>{{ dl.last_error }}</td>
+      <td>{{ dl.failed_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+      <td>
+        <button hx-post="/dashboard/dead-letters/{{ dl.id }}/retry" hx-target="#dl-{{ dl.id }}" hx-swap="outerHTML">Retry</button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">Dead letter queue is empty</div>
+{% endif %}
