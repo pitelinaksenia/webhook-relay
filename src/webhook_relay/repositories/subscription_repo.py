@@ -11,6 +11,9 @@ class SubscriptionRepo:
     def __init__(self, session: AsyncSession):
         self.session = session
 
+    async def commit(self) -> None:
+        await self.session.commit()
+
     async def rollback(self) -> None:
         await self.session.rollback()
 
@@ -21,8 +24,7 @@ class SubscriptionRepo:
             secret=subscription_data.secret,
         )
         self.session.add(subscription)
-        await self.session.commit()
-        await self.session.refresh(subscription)
+        await self.session.flush()
         return subscription
 
     async def get_all(self, limit: int, offset: int) -> list[Subscription]:
@@ -39,7 +41,7 @@ class SubscriptionRepo:
             return False
 
         await self.session.delete(subscription)
-        await self.session.commit()
+        await self.session.flush()
         return True
 
     async def get_active_by_event_type(self, event_type: str) -> list[Subscription]:

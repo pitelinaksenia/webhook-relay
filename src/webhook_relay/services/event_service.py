@@ -36,7 +36,9 @@ class EventService:
         await self.event_repo.commit()
 
         for delivery in deliveries:
-            await self.arq_pool.enqueue_job("deliver_webhook", str(delivery.id))
+            await self.arq_pool.enqueue_job(
+                "deliver_webhook", str(delivery.id), _job_id=f"{delivery.id}:1"
+            )
 
         return event
 

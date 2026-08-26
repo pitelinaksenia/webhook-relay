@@ -1,7 +1,11 @@
+import logging
+
 from webhook_relay.models.session import SessionLocal
 from webhook_relay.repositories.dead_letter_repo import DeadLetterRepo
 from webhook_relay.repositories.delivery_repo import DeliveryRepo
 from webhook_relay.services.webhook_delivery_service import WebhookDeliveryService
+
+logger = logging.getLogger(__name__)
 
 
 async def deliver_webhook(ctx: dict, delivery_id: str) -> None:
@@ -13,4 +17,8 @@ async def deliver_webhook(ctx: dict, delivery_id: str) -> None:
             delivery_repo=DeliveryRepo(session),
             dead_letter_repo=DeadLetterRepo(session),
         )
-        await service.deliver(delivery_id)
+        try:
+            await service.deliver(delivery_id)
+        except Exception:
+            logger.exception("deliver_webhook failed for delivery %s", delivery_id)
+            raise

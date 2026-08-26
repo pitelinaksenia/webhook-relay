@@ -14,12 +14,17 @@ SECRET = os.environ.get("MOCK_RECEIVER_SECRET", "demo-secret")
 
 @dataclass
 class State:
-    mode: str = "ok"  # ok | fail | timeout
+    mode: str = "ok"  # ok | fail | timeout | reject
     received: list[dict] = field(default_factory=list)
     seen_idempotency_keys: set[str] = field(default_factory=set)
 
 
 state = State()
+
+
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
 
 
 @app.post("/webhook")
@@ -51,13 +56,16 @@ async def receive_webhook(
     if state.mode == "fail":
         raise HTTPException(status_code=500, detail="simulated failure")
 
+    if state.mode == "reject":
+        raise HTTPException(status_code=400, detail="simulated client error")
+
     return {"status": "received", "duplicate": is_duplicate}
 
 
 @app.post("/_control/mode/{mode}")
 async def set_mode(mode: str):
-    if mode not in ("ok", "fail", "timeout"):
-        raise HTTPException(status_code=400, detail="mode must be ok, fail or timeout")
+    if mode not in ("ok", "fail", "timeout", "reject"):
+        raise HTTPException(status_code=400, detail="mode must be ok, fail, timeout or reject")
     state.mode = mode
     return {"mode": state.mode}
 

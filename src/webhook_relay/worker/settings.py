@@ -1,8 +1,15 @@
+import logging
+
 import httpx
-from arq.connections import RedisSettings
 
 from webhook_relay.config import settings
+from webhook_relay.queue.pool import get_redis_settings
 from webhook_relay.worker.tasks import deliver_webhook
+
+logging.basicConfig(
+    level=logging.DEBUG if settings.debug else logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 
 async def startup(ctx: dict) -> None:
@@ -24,4 +31,4 @@ class WorkerSettings:
     functions = [deliver_webhook]
     on_startup = startup
     on_shutdown = shutdown
-    redis_settings = RedisSettings.from_dsn(settings.redis_url.get_secret_value())
+    redis_settings = get_redis_settings()

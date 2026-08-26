@@ -18,7 +18,8 @@ class EventRepo:
         event = Event(
             event_type=event_data.event_type,
             payload=event_data.payload,
-            idempotency_key=event_data.idempotency_key,
+            idempotency_key=event_data.idempotency_key or str(uuid.uuid4()),
+            source=event_data.source,
         )
         self.session.add(event)
         await self.session.flush()

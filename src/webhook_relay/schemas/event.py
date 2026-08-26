@@ -10,6 +10,7 @@ class EventCreate(BaseModel):
     event_type: str
     payload: dict
     idempotency_key: str | None = None
+    source: str | None = None
 
 
 class EventResponse(BaseModel):

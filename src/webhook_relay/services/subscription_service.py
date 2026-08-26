@@ -20,7 +20,9 @@ class SubscriptionService:
         encrypted_data = subscription_data.model_copy(
             update={"secret": encrypt_secret(subscription_data.secret)}
         )
-        return await self.subscription_repo.create(encrypted_data)
+        subscription = await self.subscription_repo.create(encrypted_data)
+        await self.subscription_repo.commit()
+        return subscription
 
     async def get_all(self, limit: int, offset: int) -> list[Subscription]:
         return await self.subscription_repo.get_all(limit=limit, offset=offset)
@@ -40,6 +42,8 @@ class SubscriptionService:
 
         if not deleted:
             raise SubscriptionNotFoundError(subscription_id)
+
+        await self.subscription_repo.commit()
 
     async def get_deliveries(
         self, subscription_id: uuid.UUID, limit: int, offset: int

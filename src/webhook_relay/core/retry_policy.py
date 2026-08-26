@@ -33,8 +33,8 @@ def compute_backoff(
     max_delay: float,
     jitter: float,
 ) -> float:
-    delay = min(base_delay * (2**attempt), max_delay)
-    return delay + random.uniform(0, jitter)
+    delay = base_delay * (2 ** (attempt - 1))
+    return min(delay + random.uniform(0, jitter), max_delay)
 
 
 def parse_retry_after(header_value: str | None) -> float | None:

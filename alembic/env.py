@@ -5,7 +5,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
-from webhook_relay.config import settings
+from webhook_relay.config import Environment, settings
 from webhook_relay.models import Base
 
 # this is the Alembic Config object, which provides
@@ -59,7 +59,8 @@ async def run_async_migrations() -> None:
     """In this scenario we need to create an Engine
     and associate a connection with the context.
     """
-    connectable = create_async_engine(get_url(), connect_args={"ssl": "require"})
+    connect_args = {"ssl": "require"} if settings.env == Environment.PRODUCTION else {}
+    connectable = create_async_engine(get_url(), connect_args=connect_args)
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

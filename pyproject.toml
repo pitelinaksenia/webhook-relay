@@ -33,6 +33,9 @@ dev = [
     "ruff>=0.15.22",
 ]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"

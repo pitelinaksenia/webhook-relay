@@ -33,12 +33,25 @@ class DeliveryRepo:
     async def get_by_id(self, delivery_id: uuid.UUID) -> Delivery | None:
         return await self.session.get(Delivery, delivery_id)
 
-    async def get_for_processing(self, delivery_id: uuid.UUID) -> Delivery | None:
-        return await self.session.get(
-            Delivery,
-            delivery_id,
-            options=[selectinload(Delivery.subscription), selectinload(Delivery.event)],
+    async def claim_for_processing(self, delivery_id: uuid.UUID) -> Delivery | None:
+        stmt = (
+            select(Delivery)
+            .where(
+                Delivery.id == delivery_id,
+                Delivery.status.not_in(
+                    [DeliveryStatus.DELIVERED, DeliveryStatus.FAILED, DeliveryStatus.IN_PROGRESS]
+                ),
+            )
+            .options(selectinload(Delivery.subscription), selectinload(Delivery.event))
+            .with_for_update(skip_locked=True)
         )
+        delivery = (await self.session.scalars(stmt)).first()
+        if delivery is None:
+            return None
+
+        delivery.status = DeliveryStatus.IN_PROGRESS
+        await self.session.flush()
+        return delivery
 
     async def get_by_subscription_id(
         self, subscription_id: uuid.UUID, limit: int = 20, offset: int = 0

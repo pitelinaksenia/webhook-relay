@@ -4,17 +4,19 @@ import time
 
 from cryptography.fernet import Fernet
 
-from webhook_relay.config import settings
 
-_fernet = Fernet(settings.secret_encryption_key.get_secret_value())
+def _get_fernet() -> Fernet:
+    from webhook_relay.config import settings
+
+    return Fernet(settings.secret_encryption_key.get_secret_value())
 
 
 def encrypt_secret(plain_secret: str) -> str:
-    return _fernet.encrypt(plain_secret.encode()).decode()
+    return _get_fernet().encrypt(plain_secret.encode()).decode()
 
 
 def decrypt_secret(encrypted_secret: str) -> str:
-    return _fernet.decrypt(encrypted_secret.encode()).decode()
+    return _get_fernet().decrypt(encrypted_secret.encode()).decode()
 
 
 def sign(secret: str, timestamp: str, raw_body: bytes) -> str:

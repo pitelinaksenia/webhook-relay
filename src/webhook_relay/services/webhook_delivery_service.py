@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -19,6 +20,8 @@ from webhook_relay.models.delivery import Delivery, DeliveryStatus
 from webhook_relay.repositories.dead_letter_repo import DeadLetterRepo
 from webhook_relay.repositories.delivery_repo import DeliveryRepo
 from webhook_relay.security.hmac_signer import decrypt_secret, sign
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -47,8 +50,8 @@ class WebhookDeliveryService:
         self.dead_letter_repo = dead_letter_repo
 
     async def deliver(self, delivery_id: str) -> None:
-        delivery = await self.delivery_repo.get_for_processing(uuid.UUID(delivery_id))
-        if delivery is None or delivery.status in (DeliveryStatus.FAILED, DeliveryStatus.DELIVERED):
+        delivery = await self.delivery_repo.claim_for_processing(uuid.UUID(delivery_id))
+        if delivery is None:
             return
 
         attempt_result = await self._send_request(delivery)
@@ -92,7 +95,7 @@ class WebhookDeliveryService:
             )
             status_code = response.status_code
             retry_after_header = response.headers.get("Retry-After")
-            if status_code >= 400:
+            if not (200 <= status_code < 300):
                 error = f"HTTP {status_code}"
         except httpx.TimeoutException as exc:
             is_timeout = True
@@ -120,6 +123,9 @@ class WebhookDeliveryService:
         )
 
         if outcome == DeliveryOutcome.DELIVERED:
+            logger.info(
+                "delivery %s delivered on attempt %s", delivery.id, delivery.attempt_count + 1
+            )
             await self.delivery_repo.update_status(delivery.id, DeliveryStatus.DELIVERED)
             await self.session.commit()
             return
@@ -132,6 +138,12 @@ class WebhookDeliveryService:
                 "final failure"
                 if outcome == DeliveryOutcome.FAILED_FINAL
                 else "max attempts exceeded"
+            )
+            logger.warning(
+                "delivery %s failed permanently after %s attempt(s): %s",
+                delivery.id,
+                attempt_number,
+                reason,
             )
             await self.delivery_repo.update_status(
                 delivery.id, DeliveryStatus.FAILED, last_error=reason
@@ -154,8 +166,18 @@ class WebhookDeliveryService:
                 settings.retry_max_delay,
                 settings.retry_jitter,
             )
+        else:
+            delay = min(delay, settings.retry_max_delay)
 
         next_attempt_at = datetime.now(UTC) + timedelta(seconds=delay)
+
+        logger.info(
+            "delivery %s scheduled for retry #%s in %.1fs (reason: %s)",
+            delivery.id,
+            attempt_number + 1,
+            delay,
+            attempt_result.error,
+        )
 
         await self.delivery_repo.update_status(
             delivery.id,
