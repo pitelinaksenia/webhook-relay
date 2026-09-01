@@ -7,6 +7,7 @@ from time import monotonic, time
 
 import httpx
 from arq import ArqRedis
+from cryptography.fernet import InvalidToken
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from webhook_relay.config import settings
@@ -72,8 +73,24 @@ class WebhookDeliveryService:
 
         timestamp = str(int(time()))
         raw_body = json.dumps(event.payload, separators=(",", ":")).encode()
-        secret = decrypt_secret(subscription.secret)
-        signature = sign(secret, timestamp, raw_body)
+
+        try:
+            secret = decrypt_secret(subscription.secret)
+            signature = sign(secret, timestamp, raw_body)
+        except InvalidToken:
+            logger.error(
+                "delivery %s: failed to decrypt secret for subscription %s",
+                delivery.id,
+                subscription.id,
+            )
+            return AttemptResult(
+                status_code=None,
+                error="secret decryption failed",
+                is_timeout=False,
+                is_connection_error=False,
+                retry_after_header=None,
+                duration_ms=0,
+            )
 
         headers = {
             "Content-Type": "application/json",
@@ -153,7 +170,6 @@ class WebhookDeliveryService:
             return
 
         await self._schedule_retry(delivery, attempt_result, attempt_number)
-        await self.session.commit()
 
     async def _schedule_retry(
         self, delivery: Delivery, attempt_result: AttemptResult, attempt_number: int
@@ -185,10 +201,14 @@ class WebhookDeliveryService:
             last_error=attempt_result.error,
             next_attempt_at=next_attempt_at,
         )
+        await self.session.commit()
 
-        await self.arq_redis.enqueue_job(
-            "deliver_webhook",
-            str(delivery.id),
-            _defer_by=delay,
-            _job_id=f"{delivery.id}:{attempt_number}",
-        )
+        try:
+            await self.arq_redis.enqueue_job(
+                "deliver_webhook",
+                str(delivery.id),
+                _defer_by=delay,
+                _job_id=f"{delivery.id}:{attempt_number}",
+            )
+        except Exception:
+            logger.exception("failed to enqueue retry for delivery %s", delivery.id)

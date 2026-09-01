@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from arq import ArqRedis
@@ -9,6 +10,8 @@ from webhook_relay.repositories.delivery_repo import DeliveryRepo
 from webhook_relay.repositories.event_repo import EventRepo
 from webhook_relay.repositories.subscription_repo import SubscriptionRepo
 from webhook_relay.schemas.event import EventCreate
+
+logger = logging.getLogger(__name__)
 
 
 class EventService:
@@ -25,10 +28,10 @@ class EventService:
         self.arq_pool = arq_pool
 
     async def create(self, event_data: EventCreate) -> Event:
-        existing = await self.event_repo.get_by_idempotency_key(event_data.idempotency_key)
-        if existing is not None:
-            return existing
         event = await self.event_repo.create(event_data)
+        if event is None:
+            return await self.event_repo.get_by_idempotency_key(event_data.idempotency_key)
+
         subscriptions = await self.subscription_repo.get_active_by_event_type(event.event_type)
         subscription_ids = [sub.id for sub in subscriptions]
         deliveries = await self.delivery_repo.create_many(event.id, subscription_ids)
@@ -36,9 +39,14 @@ class EventService:
         await self.event_repo.commit()
 
         for delivery in deliveries:
-            await self.arq_pool.enqueue_job(
-                "deliver_webhook", str(delivery.id), _job_id=f"{delivery.id}:1"
-            )
+            try:
+                await self.arq_pool.enqueue_job(
+                    "deliver_webhook", str(delivery.id), _job_id=f"{delivery.id}:1"
+                )
+            except Exception:
+                logger.exception(
+                    "failed to enqueue delivery %s for event %s", delivery.id, event.id
+                )
 
         return event
 

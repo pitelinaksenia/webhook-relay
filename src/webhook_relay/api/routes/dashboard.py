@@ -109,6 +109,7 @@ async def dead_letters(
 ) -> HTMLResponse:
     offset = (page - 1) * PAGE_SIZE
     dead_letter_list = await dead_letter_service.get_all(limit=PAGE_SIZE, offset=offset)
+    total = await dead_letter_service.count()
 
     return templates.TemplateResponse(
         request,
@@ -118,6 +119,31 @@ async def dead_letters(
             "active_nav": "dead-letters",
             "dead_letters": dead_letter_list,
             "page": page,
+            "has_next": offset + PAGE_SIZE < total,
+            "total": total,
+        },
+    )
+
+
+@router.get("/dead-letters/table", response_class=HTMLResponse)
+async def dead_letters_table(
+    request: Request,
+    page: int = 1,
+    dead_letter_service: DeadLetterService = Depends(get_dead_letter_service),
+) -> HTMLResponse:
+    offset = (page - 1) * PAGE_SIZE
+    dead_letter_list = await dead_letter_service.get_all(limit=PAGE_SIZE, offset=offset)
+    total = await dead_letter_service.count()
+
+    return templates.TemplateResponse(
+        request,
+        "partials/dead_letters_table.html",
+        {
+            "request": request,
+            "dead_letters": dead_letter_list,
+            "page": page,
+            "has_next": offset + PAGE_SIZE < total,
+            "total": total,
         },
     )
 

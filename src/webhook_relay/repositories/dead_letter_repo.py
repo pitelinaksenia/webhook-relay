@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -28,6 +28,10 @@ class DeadLetterRepo:
 
         result = await self.session.scalars(stmt)
         return list(result.all())
+
+    async def count(self) -> int:
+        stmt = select(func.count()).select_from(DeadLetter)
+        return (await self.session.scalars(stmt)).one()
 
     async def get_by_id(self, dead_letter_id: uuid.UUID) -> DeadLetter | None:
         return await self.session.get(DeadLetter, dead_letter_id)

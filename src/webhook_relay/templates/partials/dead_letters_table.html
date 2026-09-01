@@ -21,6 +21,14 @@
     {% endfor %}
   </tbody>
 </table>
+<div class="pagination">
+  {% if page > 1 %}
+  <button hx-get="/dashboard/dead-letters/table?page={{ page - 1 }}" hx-target="#dead-letters-table">Prev</button>
+  {% endif %}
+  {% if has_next %}
+  <button hx-get="/dashboard/dead-letters/table?page={{ page + 1 }}" hx-target="#dead-letters-table">Next</button>
+  {% endif %}
+</div>
 {% else %}
 <div class="empty">Dead letter queue is empty</div>
 {% endif %}

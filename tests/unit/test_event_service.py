@@ -35,12 +35,13 @@ class TestEventServiceCreate:
             payload={"foo": "bar"},
             idempotency_key="idem-key-1",
         )
+        event_repo.create.return_value = None
         event_repo.get_by_idempotency_key.return_value = existing_event
 
         result = await service.create(make_event_create())
 
         assert result is existing_event
-        event_repo.create.assert_not_awaited()
+        event_repo.get_by_idempotency_key.assert_awaited_once_with("idem-key-1")
         subscription_repo.get_active_by_event_type.assert_not_awaited()
         delivery_repo.create_many.assert_not_awaited()
         arq_pool.enqueue_job.assert_not_awaited()
