@@ -1,6 +1,63 @@
 {% extends "base.html" %}
 {% block title %}Deliveries · Webhook Relay{% endblock %}
 {% block content %}
+<section class="card">
+  <h2 class="card-title">Send test event</h2>
+
+  <div class="field">
+    <span class="field-label">Quick fill</span>
+    <div class="presets">
+      <button type="button" onclick="fillEventForm('order.created', {order_id: 1, amount: 42.5})">order.created</button>
+      <button type="button" onclick="fillEventForm('order.updated', {order_id: 1, status: 'shipped'})">order.updated</button>
+      <button type="button" onclick="fillEventForm('invoice.paid', {invoice_id: 1, amount: 99.9})">invoice.paid</button>
+    </div>
+  </div>
+
+  <form
+    class="send-event-form"
+    hx-post="/dashboard/events"
+    hx-target="#send-result"
+    hx-swap="outerHTML"
+    hx-on::after-request="if(event.detail.successful) this.reset()"
+  >
+    <div class="field">
+      <label for="evt-type" class="field-label">Event type</label>
+      <input type="text" name="event_type" id="evt-type" placeholder="order.created" required list="event-type-options" />
+      <datalist id="event-type-options">
+        {% for et in event_types %}
+        <option value="{{ et }}"></option>
+        {% endfor %}
+      </datalist>
+    </div>
+
+    <div class="field">
+      <label for="evt-idempotency" class="field-label">Idempotency key <span class="optional">(optional)</span></label>
+      <input type="text" name="idempotency_key" id="evt-idempotency" placeholder="auto-generated if left empty" />
+    </div>
+
+    <div class="field">
+      <label for="evt-payload" class="field-label">Payload <span class="optional">(JSON)</span></label>
+      <textarea name="payload" id="evt-payload" rows="5" placeholder="{}">{}</textarea>
+    </div>
+
+    <button type="submit">Send event</button>
+  </form>
+
+  <div id="send-result" class="send-result"></div>
+</section>
+<script>
+  function fillEventForm(eventType, payload) {
+    document.getElementById("evt-type").value = eventType;
+    document.getElementById("evt-payload").value = JSON.stringify(payload, null, 2);
+  }
+</script>
+
+<section class="card">
+  <h2 class="card-title">Receiver mode</h2>
+  <p class="card-hint">Controls how the mock receiver responds to the next deliveries — <code>ok</code> succeeds, <code>fail</code> returns 500 (retryable), <code>timeout</code> hangs 15s (retryable), <code>reject</code> returns 400 (final failure, straight to DLQ).</p>
+  {% include "partials/receiver_mode.html" %}
+</section>
+
 <h1>Deliveries</h1>
 
 <div class="stats">

@@ -95,6 +95,28 @@ class TestRetryThenSuccess:
             assert refreshed.attempt_count == 3
 
 
+class TestRetryJobDoesNotCollideWithInitialAttemptJob:
+    async def test_retry_after_first_failure_is_enqueued_under_a_distinct_job_id(
+        self, db_session, arq_redis
+    ):
+        delivery = await seed_delivery(db_session)
+        service = make_service(db_session, arq_redis)
+
+        await arq_redis.enqueue_job("deliver_webhook", str(delivery.id), _job_id=f"{delivery.id}:1")
+
+        with respx.mock:
+            respx.post(RECEIVER_URL).mock(return_value=httpx.Response(500))
+            await service.deliver(str(delivery.id))
+
+        refreshed = await DeliveryRepo(db_session).get_by_id(delivery.id)
+        assert refreshed.status == DeliveryStatus.RETRYING
+
+        duplicate_attempt = await arq_redis.enqueue_job(
+            "deliver_webhook", str(delivery.id), _job_id=f"{delivery.id}:2"
+        )
+        assert duplicate_attempt is None
+
+
 class TestFinalFailure:
     async def test_4xx_marks_failed_and_writes_dead_letter(self, db_session, arq_redis):
         delivery = await seed_delivery(db_session)

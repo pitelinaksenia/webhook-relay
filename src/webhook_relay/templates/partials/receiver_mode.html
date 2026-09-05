@@ -1,0 +1,18 @@
+<div id="receiver-mode" class="field">
+  <span class="field-label">Current mode{% if receiver_mode %}: <strong>{{ receiver_mode }}</strong>{% endif %}</span>
+  <div class="presets">
+    {% for m in receiver_modes %}
+    <button
+      type="button"
+      class="mode-btn {% if receiver_mode == m %}active{% endif %}"
+      hx-post="/dashboard/receiver-mode"
+      hx-vals='{"mode": "{{ m }}"}'
+      hx-target="#receiver-mode"
+      hx-swap="outerHTML"
+    >{{ m }}</button>
+    {% endfor %}
+  </div>
+  {% if receiver_error %}
+  <div class="send-result error">{{ receiver_error }}</div>
+  {% endif %}
+</div>

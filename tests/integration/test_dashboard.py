@@ -2,12 +2,14 @@ import httpx
 import respx
 
 from tests.integration.conftest import seed_event, seed_subscription
+from webhook_relay.config import settings
 from webhook_relay.models.delivery import Delivery, DeliveryStatus
 from webhook_relay.repositories.dead_letter_repo import DeadLetterRepo
 from webhook_relay.repositories.delivery_repo import DeliveryRepo
 from webhook_relay.services.webhook_delivery_service import WebhookDeliveryService
 
 RECEIVER_URL = "http://mock-receiver/hook"
+CONTROL_MODE_URL = f"{settings.mock_receiver_url}/_control/mode"
 
 
 async def seed_delivery(db_session, status: DeliveryStatus = DeliveryStatus.PENDING) -> Delivery:
@@ -27,7 +29,9 @@ class TestOverview:
     async def test_renders_delivery_from_db(self, client, db_session):
         delivery = await seed_delivery(db_session)
 
-        response = await client.get("/dashboard/")
+        with respx.mock:
+            respx.get(CONTROL_MODE_URL).mock(return_value=httpx.Response(200, json={"mode": "ok"}))
+            response = await client.get("/dashboard/")
 
         assert response.status_code == 200
         assert str(delivery.id) in response.text
@@ -40,6 +44,93 @@ class TestOverview:
 
         assert response.status_code == 200
         assert str(delivered.id) in response.text
+
+
+class TestReceiverMode:
+    async def test_overview_shows_current_mode(self, client, db_session):
+        with respx.mock:
+            respx.get(CONTROL_MODE_URL).mock(
+                return_value=httpx.Response(200, json={"mode": "fail"})
+            )
+            response = await client.get("/dashboard/")
+
+        assert response.status_code == 200
+        assert ">fail<" in response.text
+        assert 'class="mode-btn active"' in response.text
+
+    async def test_set_mode_posts_to_mock_receiver(self, client):
+        with respx.mock:
+            route = respx.post(f"{CONTROL_MODE_URL}/timeout").mock(
+                return_value=httpx.Response(200, json={"mode": "timeout"})
+            )
+            response = await client.post("/dashboard/receiver-mode", data={"mode": "timeout"})
+
+        assert response.status_code == 200
+        assert route.called
+        assert ">timeout<" in response.text
+        assert 'class="mode-btn active"' in response.text
+
+    async def test_unknown_mode_is_rejected(self, client):
+        with respx.mock:
+            respx.get(CONTROL_MODE_URL).mock(return_value=httpx.Response(200, json={"mode": "ok"}))
+            response = await client.post("/dashboard/receiver-mode", data={"mode": "bogus"})
+
+        assert response.status_code == 200
+        assert "Unknown mode" in response.text
+
+    async def test_unreachable_receiver_shows_error(self, client):
+        with respx.mock:
+            respx.post(f"{CONTROL_MODE_URL}/fail").mock(side_effect=httpx.ConnectError("refused"))
+            response = await client.post("/dashboard/receiver-mode", data={"mode": "fail"})
+
+        assert response.status_code == 200
+        assert "unreachable" in response.text
+
+
+class TestSendTestEvent:
+    async def test_creates_event_and_fans_out_to_matching_subscription(self, client, db_session):
+        await seed_subscription(db_session, event_types=["order.created"])
+
+        response = await client.post(
+            "/dashboard/events",
+            data={"event_type": "order.created", "payload": '{"order_id": 1}'},
+        )
+
+        assert response.status_code == 200
+        assert "fanned out to 1 subscription" in response.text
+        assert "order.created" in response.text
+
+    async def test_no_matching_subscription_still_creates_event(self, client):
+        response = await client.post(
+            "/dashboard/events",
+            data={"event_type": "invoice.paid", "payload": "{}"},
+        )
+
+        assert response.status_code == 200
+        assert "fanned out to 0 subscription" in response.text
+
+    async def test_invalid_json_payload_returns_error_without_creating_event(
+        self, client, db_session
+    ):
+        response = await client.post(
+            "/dashboard/events",
+            data={"event_type": "order.created", "payload": "{not json"},
+        )
+
+        assert response.status_code == 200
+        assert "Invalid payload JSON" in response.text
+
+        events = await client.get("/dashboard/deliveries")
+        assert "order.created" not in events.text
+
+    async def test_non_object_payload_is_rejected(self, client):
+        response = await client.post(
+            "/dashboard/events",
+            data={"event_type": "order.created", "payload": "[1, 2, 3]"},
+        )
+
+        assert response.status_code == 200
+        assert "Invalid payload JSON" in response.text
 
 
 class TestDeliveryDetail:

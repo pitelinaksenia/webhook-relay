@@ -38,6 +38,7 @@ class EventService:
         attributes.set_committed_value(event, "deliveries", deliveries)
         await self.event_repo.commit()
 
+        failed_delivery_ids = []
         for delivery in deliveries:
             try:
                 await self.arq_pool.enqueue_job(
@@ -47,6 +48,13 @@ class EventService:
                 logger.exception(
                     "failed to enqueue delivery %s for event %s", delivery.id, event.id
                 )
+                failed_delivery_ids.append(delivery.id)
+
+        if failed_delivery_ids:
+            raise RuntimeError(
+                f"failed to enqueue {len(failed_delivery_ids)} of {len(deliveries)} "
+                f"deliveries for event {event.id}: {failed_delivery_ids}"
+            )
 
         return event
 

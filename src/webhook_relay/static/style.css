@@ -215,3 +215,122 @@ pre {
   flex: 1;
   min-width: 160px;
 }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.75rem 2rem 2rem;
+  margin-bottom: 2.5rem;
+}
+
+.card-title {
+  margin: 0 0 1.75rem;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.6rem;
+}
+
+.field:last-of-type {
+  margin-bottom: 1.75rem;
+}
+
+.field-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.field-label .optional {
+  text-transform: none;
+  letter-spacing: normal;
+  opacity: 0.7;
+}
+
+.send-event-form input,
+.send-event-form textarea {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  font-size: 0.95rem;
+  padding: 0.6rem 0.8rem;
+}
+
+.presets {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.presets button {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.card-hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: -0.75rem 0 1.5rem;
+  line-height: 1.5;
+}
+
+.card-hint code {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.78rem;
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.send-event-form textarea {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  min-height: 130px;
+  resize: vertical;
+}
+
+.send-event-form button[type="submit"] {
+  font-size: 0.95rem;
+  padding: 0.6rem 1.3rem;
+}
+
+.send-result {
+  border-radius: 6px;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.send-result:empty {
+  display: none;
+  padding: 0;
+  margin: 0;
+}
+
+.send-result.ok {
+  background: rgba(62, 207, 142, 0.12);
+  color: var(--ok);
+  margin-top: 1rem;
+}
+
+.send-result.error {
+  background: rgba(244, 87, 63, 0.12);
+  color: var(--err);
+  margin-top: 1rem;
+}

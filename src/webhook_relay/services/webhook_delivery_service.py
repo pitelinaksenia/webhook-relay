@@ -204,11 +204,19 @@ class WebhookDeliveryService:
         await self.session.commit()
 
         try:
-            await self.arq_redis.enqueue_job(
+            job = await self.arq_redis.enqueue_job(
                 "deliver_webhook",
                 str(delivery.id),
                 _defer_by=delay,
-                _job_id=f"{delivery.id}:{attempt_number}",
+                _job_id=f"{delivery.id}:{attempt_number + 1}",
             )
+            if job is None:
+                logger.error(
+                    "retry job for delivery %s (attempt #%s) was not enqueued: "
+                    "a job with the same id already exists",
+                    delivery.id,
+                    attempt_number + 1,
+                )
         except Exception:
             logger.exception("failed to enqueue retry for delivery %s", delivery.id)
+            raise

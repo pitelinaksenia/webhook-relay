@@ -1,0 +1,10 @@
+{% if error %}
+<div id="send-result" class="send-result error">{{ error }}</div>
+{% else %}
+<div id="send-result" class="send-result ok">
+  Created <code>{{ event.event_type }}</code> (id {{ event.id }}) — fanned out to {{ delivery_count }} subscription(s).
+</div>
+<div id="deliveries-table" hx-swap-oob="true">
+  {% include "partials/deliveries_table.html" %}
+</div>
+{% endif %}

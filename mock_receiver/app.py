@@ -70,6 +70,11 @@ async def set_mode(mode: str):
     return {"mode": state.mode}
 
 
+@app.get("/_control/mode")
+async def get_mode():
+    return {"mode": state.mode}
+
+
 @app.get("/_control/received")
 async def get_received():
     return state.received

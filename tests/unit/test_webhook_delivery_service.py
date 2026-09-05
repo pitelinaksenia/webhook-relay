@@ -150,7 +150,7 @@ class TestRetryScheduling:
         mocks["arq_redis"].enqueue_job.assert_awaited_once()
         job_args, job_kwargs = mocks["arq_redis"].enqueue_job.call_args
         assert job_args == ("deliver_webhook", str(delivery.id))
-        assert job_kwargs["_job_id"] == f"{delivery.id}:1"
+        assert job_kwargs["_job_id"] == f"{delivery.id}:2"
         max_expected = min(
             settings.retry_base_delay * 1 + settings.retry_jitter, settings.retry_max_delay
         )

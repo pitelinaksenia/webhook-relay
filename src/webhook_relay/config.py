@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     retry_base_delay: float = 1.0
     retry_max_delay: float = 300.0
     retry_jitter: float = 1.0
+    mock_receiver_url: str = "http://mock-receiver:9000"
 
 
 settings = Settings()
