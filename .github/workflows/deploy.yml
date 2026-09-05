@@ -1,0 +1,71 @@
+name: Test and deploy
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  # Test-only values, not used against any real service or data.
+  DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/webhook_relay_test
+  REDIS_URL: redis://localhost:6380/0
+  SECRET_ENCRYPTION_KEY: 92tBRDwe7EZFGRuYnrtQ7RkvLcA_wHay8KHOMnZNT7E=
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: webhook_relay_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+
+      - run: uv sync --frozen
+
+      - run: uv run ruff check .
+
+      - run: uv run pytest
+
+  build-and-push:
+    needs: test
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.CLOUDRU_REGISTRY }}
+          username: ${{ secrets.CLOUDRU_KEY_ID }}
+          password: ${{ secrets.CLOUDRU_KEY_SECRET }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.CLOUDRU_REGISTRY }}/webhook-relay:latest
